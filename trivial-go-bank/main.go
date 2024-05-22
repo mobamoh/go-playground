@@ -1,10 +1,20 @@
 package main
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+	"os"
+	"strconv"
+)
 
 func main() {
+
+	accountBalance, err := readBalanceFromFile()
+	if err != nil {
+		panic(err)
+	}
+
 	fmt.Println("Welcome to Trivial Go Bank!")
-	var accountBalance float64 = 1000
 	for {
 		showMenu()
 		input := readInput("Enter your choice:")
@@ -13,17 +23,20 @@ func main() {
 			continue
 		}
 
-		if input == 1 {
+		switch input {
+
+		case 1:
 			fmt.Printf("You balance is: %.2f\n", accountBalance)
 
-		} else if input == 2 {
+		case 2:
 			amount := readInput("Enter the amount you want to deposit:")
 			if amount <= 0 {
 				fmt.Println("Invalid amount! Must be greater than 0.")
 				continue
 			}
 			accountBalance += amount
-		} else if input == 3 {
+			writeBalanceToFile(accountBalance)
+		case 3:
 			amount := readInput("Enter the amount you want to withdraw:")
 
 			if amount <= 0 {
@@ -35,11 +48,11 @@ func main() {
 				continue
 			}
 			accountBalance -= amount
-		} else {
+			writeBalanceToFile(accountBalance)
+		default:
 			fmt.Println("Goodbye!")
-			break
+			return
 		}
-
 	}
 }
 
@@ -56,4 +69,20 @@ func readInput(text string) float64 {
 	var input float64
 	fmt.Scan(&input)
 	return input
+}
+
+func writeBalanceToFile(balance float64) {
+	os.WriteFile("balance.txt", []byte(fmt.Sprint(balance)), 0644)
+}
+
+func readBalanceFromFile() (float64, error) {
+	balancByte, err := os.ReadFile("balance.txt")
+	if err != nil {
+		return 0, errors.New("no balance account found, please contact admin.")
+	}
+	balance, err := strconv.ParseFloat(string(balancByte), 64)
+	if err != nil {
+		return 0, errors.New("couldn't parse the balance amount, please contact admin.")
+	}
+	return balance, nil
 }
