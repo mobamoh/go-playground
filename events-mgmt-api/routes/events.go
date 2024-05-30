@@ -33,11 +33,13 @@ func GetEvent(ctx *gin.Context) {
 }
 
 func PostEvent(ctx *gin.Context) {
+
 	var event event.Event
 	if err := ctx.BindJSON(&event); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"msg": "unsupported format"})
 		return
 	}
+	event.UserID = ctx.GetInt64("uid")
 	if err := event.Save(); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"msg": "invalid json format"})
 		return
@@ -52,8 +54,14 @@ func UpdateEvent(ctx *gin.Context) {
 		return
 	}
 
-	if _, err = event.GetEventByID(id); err != nil {
+	existingEvent, err := event.GetEventByID(id)
+	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"msg": "couldn't fetch event"})
+		return
+	}
+
+	if existingEvent.UserID != ctx.GetInt64("uid") {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"msg": "unauthirized operation"})
 		return
 	}
 
@@ -69,4 +77,29 @@ func UpdateEvent(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"msg": "event updated successfully"})
+}
+
+func DeleteEvent(ctx *gin.Context) {
+	id, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"msg": "invalid param"})
+		return
+	}
+
+	existingEvent, err := event.GetEventByID(id)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"msg": "couldn't fetch event"})
+		return
+	}
+
+	if existingEvent.UserID != ctx.GetInt64("uid") {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"msg": "unauthirized operation"})
+		return
+	}
+
+	if err = existingEvent.DeleteEvent(); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"msg": "couldn't delete event"})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"msg": "event deleted successfully"})
 }
